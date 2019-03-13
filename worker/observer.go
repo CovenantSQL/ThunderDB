@@ -28,7 +28,7 @@ import (
 // ObserverFetchBlock handles observer fetch block logic.
 func (rpc *DBMSRPCService) ObserverFetchBlock(req *ObserverFetchBlockReq, resp *ObserverFetchBlockResp) (err error) {
 	subscriberID := req.GetNodeID().ToNodeID()
-	resp.Block, resp.Count, err = rpc.dbms.observerFetchBlock(req.DatabaseID, subscriberID, req.Count)
+	resp.Block, resp.Count, err = rpc.DBMS.observerFetchBlock(req.DatabaseID, subscriberID, req.Count)
 	return
 }
 

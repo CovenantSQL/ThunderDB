@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/CovenantSQL/CovenantSQL/conf"
@@ -75,12 +76,12 @@ func TestLoadPrivateKey(t *testing.T) {
 		defer os.Remove("./.empty")
 		os.Create("./.empty")
 		lk, err := LoadPrivateKey("./.empty", []byte(password))
-		So(err, ShouldEqual, symmetric.ErrInputSize)
+		So(errors.Cause(err), ShouldEqual, symmetric.ErrInputSize)
 		So(lk, ShouldBeNil)
 	})
 	Convey("not key file1", t, func() {
 		lk, err := LoadPrivateKey("doc.go", []byte(password))
-		So(err, ShouldEqual, symmetric.ErrInputSize)
+		So(errors.Cause(err), ShouldEqual, symmetric.ErrInputSize)
 		So(lk, ShouldBeNil)
 	})
 	Convey("not key file2", t, func() {
@@ -88,7 +89,7 @@ func TestLoadPrivateKey(t *testing.T) {
 		enc, _ := symmetric.EncryptWithPassword([]byte("aa"), []byte(password), []byte(salt))
 		ioutil.WriteFile("./.notkey", enc, 0600)
 		lk, err := LoadPrivateKey("./.notkey", []byte(password))
-		So(err, ShouldEqual, ErrNotKeyFile)
+		So(errors.Cause(err), ShouldEqual, ErrNotKeyFile)
 		So(lk, ShouldBeNil)
 	})
 	Convey("hash not match", t, func() {
@@ -166,6 +167,6 @@ func TestInitLocalKeyPair_error(t *testing.T) {
 		enc, _ := symmetric.EncryptWithPassword(bytes.Repeat([]byte("a"), 65), []byte(password), []byte(salt))
 		ioutil.WriteFile("./.ErrNotKeyFile", enc, 0600)
 		err := InitLocalKeyPair("./.ErrNotKeyFile", []byte(password))
-		So(err, ShouldEqual, ErrNotKeyFile)
+		So(errors.Cause(err), ShouldEqual, ErrNotKeyFile)
 	})
 }

@@ -60,6 +60,19 @@ var (
 		`CREATE INDEX IF NOT EXISTS "idx__indexed_transactions__timestamp" ON "indexed_transactions" ("timestamp" DESC);`,
 		`CREATE INDEX IF NOT EXISTS "idx__indexed_transactions__tx_type__timestamp" ON "indexed_transactions" ("tx_type", "timestamp" DESC);`,
 		`CREATE INDEX IF NOT EXISTS "idx__indexed_transactions__address__timestamp" ON "indexed_transactions" ("address", "timestamp" DESC);`,
+
+		`CREATE TABLE IF NOT EXISTS "accounts" (
+			"address"	TEXT,
+			"encoded"	BLOB,
+			UNIQUE ("address")
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS "shardChain" (
+			"address"	TEXT,
+			"id"		TEXT,
+			"encoded"	BLOB,
+			UNIQUE ("address", "id")
+		);`,
 	}
 
 	blocksMockData = [][]interface{}{
@@ -238,11 +251,11 @@ func TestJSONRPCService(t *testing.T) {
 	defer os.Remove(testdb)
 
 	// log.SetLevel(log.DebugLevel)
-	go api.Serve(":8546", testdb)
-	defer api.StopService()
+	go api.Serve(":8547", testdb, nil)
+	defer api.Shutdown()
 
 	var (
-		addr        = "ws://localhost:8546"
+		addr        = "ws://localhost:8547"
 		conveyBlock = func(convey C, item *models.Block, cp []interface{}) {
 			if cp == nil {
 				convey.So(item, ShouldBeNil)
@@ -551,6 +564,32 @@ func TestJSONRPCService(t *testing.T) {
 					conveyTransaction(c, result, testCase.ExpectedResult)
 				})
 			}
+		})
+
+		Reset(func() {
+			rpc.Close()
+		})
+	})
+
+	Convey("system API", t, func() {
+		rpc, err := setupWebsocketClient(addr)
+		if err != nil {
+			t.Errorf("failed to connect to wsapi server: %v", err)
+			return
+		}
+
+		Convey("bp_getRunningStatus should success", func(c C) {
+			var result models.RunningStatus
+			err := rpc.Call(
+				context.Background(),
+				"bp_getRunningStatus",
+				nil,
+				&result,
+			)
+			So(err, ShouldBeNil)
+			So(&result, ShouldResemble, &models.RunningStatus{
+				BlockHeight: 14,
+			})
 		})
 
 		Reset(func() {

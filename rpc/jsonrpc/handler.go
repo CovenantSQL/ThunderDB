@@ -38,18 +38,16 @@ func (h *Handler) RegisterMethod(method string, handlerFunc HandlerFunc, paramsT
 		panic(fmt.Sprintf("method %q already registered", method))
 	}
 
-	if paramsType == nil {
-		h.methods[method] = handlerFunc
-		return
+	if paramsType != nil {
+		// Pre-process rpc parameters with a middleware
+		typ := reflect.TypeOf(paramsType)
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+		handlerFunc = processParams(handlerFunc, typ)
 	}
 
-	// Pre-process rpc parameters with a middleware
-	typ := reflect.TypeOf(paramsType)
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-
-	h.methods[method] = processParams(handlerFunc, typ)
+	h.methods[method] = handlerFunc
 }
 
 // Handle implements jsonrpc2.Handler.
@@ -72,12 +70,9 @@ func (h *Handler) handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2
 		}
 	}()
 
-	fn := h.methods[req.Method]
-	if fn == nil {
+	fn, methodFound := h.methods[req.Method]
+	if !methodFound {
 		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound}
-	} else if req.Params == nil {
-		// pre-check req.Params not be nil
-		return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams}
 	}
 
 	return fn(ctx, conn, req)
